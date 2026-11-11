@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strata'wheel | Race Strategy</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px;
+  background: #101827; color: #f5f0e6;
+  font-family: Arial, sans-serif;
+}
+main { max-width: 850px; margin: auto; }
+header {
+  text-align: center; padding: 25px 10px;
+  border-bottom: 2px solid #d84a3a;
+}
+h1 { letter-spacing: 3px; margin-bottom: 5px; }
+header p { color: #b9c2ce; }
+section {
+  background: #1c293b; padding: 20px;
+  border-radius: 12px; margin-top: 20px;
+}
+h2 { color: #e7b96b; font-size: 18px; }
+label { display: block; margin: 14px 0 6px; }
+input, select {
+  width: 100%; padding: 12px; border-radius: 7px;
+  border: 1px solid #536176; background: #101827;
+  color: white; font-size: 16px;
+}
+.compounds {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+button {
+  width: 100%; margin-top: 20px; padding: 15px;
+  background: #d84a3a; border: 0; border-radius: 8px;
+  color: white; font-size: 17px; font-weight: bold;
+  cursor: pointer;
+}
+button:hover { background: #ef624f; }
+#result { line-height: 1.6; }
+.stint {
+  background: #101827; padding: 14px;
+  border-left: 4px solid #e7b96b;
+  border-radius: 6px; margin: 12px 0;
+}
+.small { color: #b9c2ce; font-size: 13px; }
+.error { color: #ff8c80; }
+@media(max-width:550px) {
+  body { padding: 12px; }
+  .compounds { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+<main>
+<header>
+  <h1>STRATA'WHEEL</h1>
+  <p>Race Strategy Engineering</p>
+  <p>Donde el gaming se convierte en estrategia.</p>
+</header>
+
+<section>
+  <h2>01 | Datos de carrera</h2>
+
+  <label>Vueltas de carrera</label>
+  <input id="laps" type="number" min="1" value="71">
+
+  <label>Condiciones meteorológicas</label>
+  <select id="weather">
+    <option value="dry">Seco</option>
+    <option value="light">Lluvia ligera o moderada</option>
+    <option value="heavy">Lluvia intensa</option>
+    <option value="drying">Pista secándose</option>
+    <option value="mixed">Condiciones cambiantes</option>
+  </select>
+
+  <label>Límite máximo de desgaste (%)</label>
+  <input id="limit" type="number" min="1" max="100" value="68">
+
+  <p class="small">
+    El límite es el desgaste máximo permitido al finalizar cada stint.
+  </p>
+</section>
+
+<section>
+  <h2>02 | Desgaste por vuelta</h2>
+  <p class="small">
+    Introduce el desgaste en porcentaje por vuelta de cada neumático.
+    Ejemplo: 2.5 significa 2.5% por vuelta.
+  </p>
+
+  <div class="compounds">
+    <div>
+      <label>Soft (%)</label>
+      <input id="soft" type="number" min="0" step="0.1" value="3">
+    </div>
+    <div>
+      <label>Medium (%)</label>
+      <input id="medium" type="number" min="0" step="0.1" value="2.5">
+    </div>
+    <div>
+      <label>Hard (%)</label>
+      <input id="hard" type="number" min="0" step="0.1" value="2">
+    </div>
+    <div>
+      <label>Intermediarios (%)</label>
+      <input id="inter" type="number" min="0" step="0.1" value="2.5">
+    </div>
+    <div>
+      <label>Lluvia extrema (%)</label>
+      <input id="wet" type="number" min="0" step="0.1" value="1.8">
+    </div>
+  </div>
+
+  <button onclick="calculate()">CALCULAR ESTRATEGIA</button>
+</section>
+
+<section id="output">
+  <h2>03 | Informe del ingeniero</h2>
+  <p>Introduce los datos y calcula tu estrategia.</p>
+</section>
+</main>
+
+<script>
+function calculate() {
+  const laps = Number(document.getElementById("laps").value);
+  const limit = Number(document.getElementById("limit").value);
+  const weather = document.getElementById("weather").value;
+
+  const all = [
+    {name:"Soft", wear:Number(soft.value), dry:true},
+    {name:"Medium", wear:Number(medium.value), dry:true},
+    {name:"Hard", wear:Number(hard.value), dry:true},
+    {name:"Intermedios", wear:Number(inter.value), wet:true},
+    {name:"Lluvia extrema", wear:Number(wet.value), wet:true}
+  ];
+
+  const output = document.getElementById("output");
+
+  if (!Number.isInteger(laps) || laps < 1 ||
+      !Number.isFinite(limit) || limit <= 0 || limit > 100) {
+    output.innerHTML = '<h2>Error</h2><p class="error">Revisa las vueltas y el límite de desgaste.</p>';
+    return;
+  }
+
+  if (all.some(t => !Number.isFinite(t.wear) || t.wear <= 0)) {
+    output.innerHTML = '<h2>Error</h2><p class="error">Todos los desgastes deben ser mayores que cero.</p>';
+    return;
+  }
+
+  let allowed;
+
+  switch(weather) {
+    case "dry":
+      allowed = all.filter(t => t.dry);
+      break;
+    case "light":
+      allowed = all.filter(t => t.name === "Intermedios");
+      break;
+    case "heavy":
+      allowed = all.filter(t => t.name === "Lluvia extrema");
+      break;
+    case "drying":
+      allowed = all.filter(t => t.name === "Intermedios" || t.dry);
+      break;
+    case "mixed":
+      allowed = all;
+      break;
+  }
+
+  // Máximo de vueltas por stint según el límite de desgaste.
+  allowed = allowed.map(t => ({
+    ...t,
+    maxStint: Math.floor((limit + 1e-9) / t.wear)
+  })).filter(t => t.maxStint >= 1);
+
+  if (!allowed.length) {
+    output.innerHTML = '<h2>Sin estrategia posible</h2><p class="error">Ningún neumático puede completar siquiera una vuelta respetando el límite.</p>';
+    return;
+  }
+
+  /*
+    Programación dinámica:
+    Busca completar todas las vueltas con el menor número
+    de stints. Si hay empate, prefiere menor desgaste acumulado.
+  */
+  const dp = Array(laps + 1).fill(null);
+  dp[0] = {stops: -1, wear: 0, previous: null};
+
+  for (let lap = 0; lap < laps; lap++) {
+    if (!dp[lap]) continue;
+
+    for (const tire of allowed) {
+      for (let length = 1; length <= tire.maxStint && lap + length <= laps; length++) {
+        const next = lap + length;
+        const candidate = {
+          stops: dp[lap].stops + 1,
+          wear: dp[lap].wear + length * tire.wear,
+          previous: {lap, tire, length}
+        };
+
+        const current = dp[next];
+        if (!current ||
+            candidate.stops < current.stops ||
+            (candidate.stops === current.stops && candidate.wear < current.wear)) {
+          dp[next] = candidate;
+        }
+      }
+    }
+  }
+
+  if (!dp[laps]) {
+    output.innerHTML = '<h2>Sin estrategia</h2><p>No se encontró una combinación válida.</p>';
+    return;
+  }
+
+  // Reconstruir los stints.
+  let plan = [];
+  let position = laps;
+
+  while (position > 0) {
+    const step = dp[position].previous;
+    if (!step) break;
+
+    plan.unshift({
+      tire: step.tire,
+      length: step.length,
+      start: step.lap + 1,
+      end: position,
+      wear: step.length * step.tire.wear
+    });
+
+    position = step.lap;
+  }
+
+  const stops = plan.length - 1;
+  const totalWear = plan.reduce((sum, stint) => sum + stint.wear, 0);
+
+  let html = `
+    <h2>RESULTADO DE ESTRATEGIA</h2>
+    <p><strong>Carrera:</strong> ${laps} vueltas</p>
+    <p><strong>Paradas:</strong> ${stops}</p>
+    <p><strong>Stints:</strong> ${plan.length}</p>
+    <p><strong>Límite de desgaste:</strong> ${limit}%</p>
+    <hr>
+    <h2>Plan de carrera</h2>
+  `;
+
+  plan.forEach((stint, index) => {
+    html += `
+      <div class="stint">
+        <strong>Stint ${index + 1}: ${stint.tire.name}</strong><br>
+        Vueltas ${stint.start} a ${stint.end}<br>
+        Duración: ${stint.length} vueltas<br>
+        Desgaste estimado: ${stint.wear.toFixed(1)}%
+        ${index < plan.length - 1 ? "<br><strong>BOX al finalizar la vuelta " + stint.end + "</strong>" : "<br><strong>Final de carrera</strong>"}
+      </div>
+    `;
+  });
+
+  html += `
+    <hr>
+    <h2>Resumen del ingeniero</h2>
+    <p>La estrategia calculada necesita <strong>${stops} paradas</strong>.</p>
+    <p>Desgaste acumulado estimado entre stints: ${totalWear.toFixed(1)} puntos porcentuales.</p>
+    <p class="small">
+      Método: programación dinámica, minimizando el número de stints.
+      En caso de empate, se prefiere menor desgaste acumulado.
+    </p>
+    <p class="small">
+      Este cálculo no incluye tiempos de vuelta, pérdida de tiempo en boxes,
+      temperatura, graining, lluvia por sectores ni evolución real de la pista.
+      En condiciones cambiantes, los neumáticos permitidos son una simplificación.
+    </p>
+  `;
+
+  output.innerHTML = html;
+}
+</script>
+</body>
+</html>
